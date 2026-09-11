@@ -385,7 +385,7 @@ card.innerHTML = `
     <div style="height:${Math.max(labels.length * 55, 220)}px">
         <canvas></canvas>
     </div>
-    ${allowToggle ? '<small class="toggle-text text-muted" style="cursor:pointer; text-decoration:underline;">Click "Other" to view all options</small>' : ''}
+    ${allowToggle ? '<small class="toggle-text text-muted" style="cursor:pointer; text-decoration:underline;">Click "Other" (or this text) to view all options</small>' : ''}
 </div>
 `;
 
@@ -490,33 +490,23 @@ options: {
 }
 });
 
-// Click the "Other" bar to expand all answers; click again to collapse.
+// Expand/collapse the "Other" bucket. Only charts with hidden answers can expand.
 if (allowToggle && (!isComparison || sourceLabel == "2026 TPC Survey")) {
 let isExpanded = false;
 
-ctx.onclick = function(event) {
-    const points = chart.getElementsAtEventForMode(
-        event, "nearest", { intersect: true }, true
-    );
+// Nothing was bucketed into "Other" -> the hint is misleading, so hide it.
+if (toggleText && hiddenAnswers.length === 0) {
+    toggleText.style.display = "none";
+}
 
-    if (!points.length) return;
-
-    const index = points[0].index;
-    const clickedOther = labels[index] == "Other";
-
-    if (!clickedOther && !isExpanded) return;
-
-    isExpanded = !isExpanded;
-
-    let nextEntries;
-    if (isExpanded) {
-        nextEntries = fullEntries;
-    } else {
-        nextEntries = [
+// Re-render the chart for the current expanded/collapsed state.
+function renderExpanded() {
+    const nextEntries = isExpanded
+        ? fullEntries
+        : [
             ...fullEntries.slice(0, 3),
             ["Other", hiddenAnswers.reduce((sum, item) => sum + item[1], 0)]
         ];
-            }
 
     labels = nextEntries.map(e => e[0]);
     values = nextEntries.map(e => e[1]);
@@ -535,8 +525,32 @@ ctx.onclick = function(event) {
     });
 
     toggleText.textContent = isExpanded
-        ? 'Click any bar to collapse'
-        : 'Click "Other" to view all options';
+        ? 'Click to collapse'
+        : 'Click "Other" (or this text) to view all options';
+}
+
+// Wire the hint text so clicking it toggles (it looks like a link).
+if (toggleText && hiddenAnswers.length > 0) {
+    toggleText.onclick = function() {
+        isExpanded = !isExpanded;
+        renderExpanded();
+    };
+}
+
+// Also toggle when the "Other" bar itself is clicked (or any bar to collapse).
+ctx.onclick = function(event) {
+    const points = chart.getElementsAtEventForMode(
+        event, "nearest", { intersect: true }, true
+    );
+
+    if (!points.length) return;
+
+    const clickedOther = labels[points[0].index] == "Other";
+    if (!clickedOther && !isExpanded) return;
+    if (hiddenAnswers.length === 0) return;
+
+    isExpanded = !isExpanded;
+    renderExpanded();
 };
 }
 
