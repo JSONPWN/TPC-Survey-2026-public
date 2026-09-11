@@ -1,0 +1,169 @@
+#searchBox,
+.form-select{
+    border-radius:10px;
+    padding:.75rem;
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--text);
+}
+
+#searchBox:focus,
+.form-select:focus{
+    border-color:var(--primary);
+    box-shadow:0 0 0 .2rem rgba(37,99,235,.2);
+}
+
+.btn{
+    border-radius:10px;
+    font-weight:600;
+}
+
+.btn-primary{
+    background:var(--primary);
+    border-color:var(--primary);
+}
+
+.btn-primary:hover{
+    background:var(--primary-dark);
+    border-color:var(--primary-dark);
+}
+
+.chart-card{
+    background:var(--surface);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    margin-bottom:30px;
+    overflow:hidden;
+}
+
+.chart-header{
+    padding:18px 24px;
+    border-bottom:1px solid var(--border);
+}
+
+.chart-header h3{
+    font-size:1.1rem;
+    margin:0;
+    font-weight:700;
+}
+
+.chart-body{
+    padding:24px;
+}
+
+.chart-footer{
+    border-top:1px solid var(--border);
+    padding:15px 24px;
+    color:var(--text-light);
+    font-size:.9rem;
+}
+
+.stat-card{
+    background:var(--surface);
+    border-radius:14px;
+    padding:25px;
+    text-align:center;
+    box-shadow:var(--shadow);
+}
+
+.stat-card i{
+    font-size:2rem;
+    color:var(--primary);
+    margin-bottom:15px;
+}
+
+.stat-card h2{
+    font-size:2rem;
+    margin:0;
+}
+
+.stat-card p{
+    color:var(--text-light);
+    margin-top:8px;
+}
+
+
+.card,
+.chart-card,
+.stat-card{
+    transition:.25s;
+}
+
+.card:hover,
+.chart-card:hover,
+.stat-card:hover{
+    transform:translateY(-4px);
+    box-shadow:0 12px 28px rgba(0,0,0,.12);
+}
+
+.response-item{
+    background:var(--surface);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:1rem 1.25rem;
+    opacity:.92;
+}
+
+/* Demographic filter bar */
+.filter-bar{
+    position:relative;
+    z-index:1030; /* lift the whole bar above the cards below so open menus aren't covered */
+}
+
+/* Don't let the hover-lift transform trap the open dropdowns in a lower stacking context. */
+.filter-bar:hover{
+    transform:none;
+    box-shadow:var(--shadow);
+}
+
+.filter-bar .card-body{
+    padding:18px 24px;
+}
+
+.filter-bar-header{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+}
+
+.filter-bar-title{
+    font-weight:700;
+    color:var(--text);
+}
+
+.filter-bar-meta{
+    display:flex;
+    align-items:center;
+}
+
+.filter-controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+}
+
+.filter-dropdown .dropdown-toggle{
+    max-width:100%;
+}
+
+.filter-menu{
+    max-height:280px;
+    overflow-y:auto;
+    min-width:260px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    z-index:1031;
+}
+
+.filter-menu .form-check{
+    margin-bottom:2px;
+}
+
+.filter-menu .form-check-label{
+    color:var(--text);
+    font-size:.9rem;
+}

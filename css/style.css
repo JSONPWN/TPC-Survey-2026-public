@@ -1,0 +1,306 @@
+:root{
+    --primary:#2563eb;
+    --primary-dark:#1d4ed8;
+
+    --background:#f5f7fb;
+    --surface:#ffffff;
+    --border:#e5e7eb;
+
+    --text:#1f2937;
+    --text-light:#6b7280;
+
+    --navbar:#111827;
+
+    --header1:#2563eb;
+    --header2:#4f46e5;
+
+    --shadow:0 8px 24px rgba(0,0,0,.08);
+
+    --radius:14px;
+}
+
+
+body.theme-dark{
+
+    --primary:#60a5fa;
+    --primary-dark:#3b82f6;
+
+    --background:#111827;
+    --surface:#1f2937;
+    --border:#374151;
+
+    --text:#f3f4f6;
+    --text-light:#cbd5e1;
+
+    --navbar:#030712;
+
+    --header1:#111827;
+    --header2:#1e3a8a;
+
+    --shadow:0 8px 24px rgba(0,0,0,.45);
+
+}
+
+
+body.theme-pink{
+
+    --primary:#ec4899;
+    --primary-dark:#db2777;
+
+    --background:#fff8fc;
+    --surface:rgba(255,255,255,.92);
+    --border:#f7c8db;
+
+    --text:#59364d;
+    --text-light:#8d6680;
+
+    --navbar:#cf4f92;
+
+    --header1:#ff9fcf;
+    --header2:#e8b8ff;
+
+    --shadow:0 10px 30px rgba(236,72,153,.15);
+
+}
+
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+
+body{
+    background:var(--background);
+    color:var(--text);
+    font-family:"Inter","Segoe UI",sans-serif;
+    line-height:1.6;
+    transition:background .35s,color .35s;
+
+    background-repeat:repeat;
+    background-size:140px 140px;
+    background-attachment:fixed;
+}
+
+
+/* Cute pink background */
+body.theme-pink{
+
+    background:
+        radial-gradient(circle at 15% 20%, rgba(255,192,220,.45) 0 18px, transparent 20px),
+        radial-gradient(circle at 85% 30%, rgba(255,220,235,.7) 0 25px, transparent 27px),
+        radial-gradient(circle at 70% 80%, rgba(247,168,200,.35) 0 15px, transparent 17px),
+        radial-gradient(circle at 25% 75%, rgba(255,214,231,.6) 0 22px, transparent 24px),
+        #fff8fc;
+
+    background-size:240px 240px;
+}
+
+
+.navbar{
+    background:var(--navbar)!important;
+    transition:.35s;
+}
+
+
+.navbar-brand{
+    font-weight:700;
+    letter-spacing:.4px;
+}
+
+
+.nav-link{
+    transition:.25s;
+}
+
+
+.nav-link:hover{
+    color:#fff!important;
+}
+
+
+header{
+    background:linear-gradient(135deg,var(--header1),var(--header2));
+    color:white;
+    padding:70px 0;
+    transition:.35s;
+}
+
+
+header h1{
+    font-weight:700;
+}
+
+
+header p{
+    opacity:.9;
+    margin-top:12px;
+    max-width:700px;
+}
+
+
+.card{
+    background:var(--surface);
+    border:none;
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    transition:all .3s;
+}
+
+
+body.theme-pink .card,
+body.theme-pink .stat-card{
+
+    backdrop-filter:blur(12px);
+    border:1px solid rgba(255,182,193,.45);
+
+}
+
+
+.card-body{
+    padding:1.5rem;
+}
+
+
+#dashboard{
+    margin-top:40px;
+}
+
+
+.dashboard-section{
+    margin-bottom:50px;
+}
+
+
+.dashboard-section h2{
+    font-size:1.6rem;
+    margin-bottom:20px;
+    font-weight:700;
+}
+
+
+footer{
+    color:var(--text-light);
+}
+
+
+::-webkit-scrollbar{
+    width:10px;
+}
+
+
+::-webkit-scrollbar-thumb{
+    background:#cbd5e1;
+    border-radius:10px;
+}
+
+
+::-webkit-scrollbar-thumb:hover{
+    background:#94a3b8;
+}
+
+
+body.theme-pink ::-webkit-scrollbar-thumb{
+    background:#f48fb1;
+}
+
+
+body.theme-pink ::-webkit-scrollbar-thumb:hover{
+    background:#ec4899;
+}
+
+
+@media(max-width:768px){
+
+header{
+    text-align:center;
+    padding:50px 0;
+}
+
+header h1{
+    font-size:2rem;
+}
+
+}
+
+
+body.theme-dark,
+body.theme-dark h1,
+body.theme-dark h2,
+body.theme-dark h3,
+body.theme-dark h4,
+body.theme-dark h5,
+body.theme-dark h6,
+body.theme-dark p,
+body.theme-dark small,
+body.theme-dark label,
+body.theme-dark li{
+    color:var(--text);
+}
+
+
+body.theme-dark .card,
+body.theme-dark .card *,
+body.theme-dark .stat-card,
+body.theme-dark .stat-card *{
+    color:#f3f4f6!important;
+}
+
+
+body.theme-dark .card p,
+body.theme-dark .card small,
+body.theme-dark .stat-card p{
+    color:#cbd5e1!important;
+}
+
+
+body.theme-dark .border-top{
+    border-color:var(--border)!important;
+}
+
+
+body.theme-pink .btn-primary{
+
+    background:#ec4899;
+    border-color:#ec4899;
+
+}
+
+
+body.theme-pink .btn-primary:hover{
+
+    background:#db2777;
+    border-color:#db2777;
+
+}
+
+
+body.theme-pink .stat-card i{
+
+    color:#ec4899;
+
+}
+
+
+.theme-toggle{
+
+    width:44px;
+    height:44px;
+    border:none;
+    border-radius:50%;
+    background:rgba(255,255,255,.15);
+    color:#fff;
+    font-size:1.2rem;
+    cursor:pointer;
+    transition:.25s;
+
+}
+
+
+.theme-toggle:hover{
+
+    background:rgba(255,255,255,.3);
+    transform:rotate(15deg);
+
+}
