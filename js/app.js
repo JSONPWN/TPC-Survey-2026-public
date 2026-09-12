@@ -86,6 +86,50 @@ const multiSelectQuestions = [
 "Which areas of philosophy have you actively engaged with/are you most interested in?"
 ];
 
+// "Favorite philosopher" is free text, so answers vary by spacing, case, and
+// last-name-vs-full-name. We canonicalize it at render time (raw data untouched).
+const FAVORITE_PHILOSOPHER_Q = "Who is your favorite philosopher?";
+
+// Normalized key: NFKC, single-spaced, lowercased, trailing dots/spaces stripped.
+function philKey(s) {
+    return String(s).normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase().replace(/[.\s]+$/, "");
+}
+
+// Curated last-name <-> full-name merges (both key forms map to one display name).
+const philosopherAliases = {
+    "hume": "David Hume",
+    "david hume": "David Hume",
+    "heidegger": "Martin Heidegger",
+    "martin heidegger": "Martin Heidegger",
+    "korsgaard": "Christine Korsgaard",
+    "christine korsgaard": "Christine Korsgaard"
+};
+
+// Build a raw -> canonical-display mapper. For non-aliased names, display uses
+// the most common original spelling in the data (so we don't invent casing).
+function buildPhilosopherCanon(dataset, question) {
+    const byKey = {};
+    dataset.forEach(p => {
+        const v = p[question];
+        if (v == null || v === "") return;
+        const raw = String(v).normalize("NFKC").replace(/\s+/g, " ").trim();
+        const k = philKey(raw);
+        (byKey[k] = byKey[k] || {})[raw] = (byKey[k][raw] || 0) + 1;
+    });
+
+    const majority = {};
+    Object.entries(byKey).forEach(([k, spellings]) => {
+        majority[k] = Object.entries(spellings)
+            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+    });
+
+    return function (raw) {
+        const clean = String(raw).normalize("NFKC").replace(/\s+/g, " ").trim();
+        const k = philKey(clean);
+        return philosopherAliases[k] || majority[k] || clean;
+    };
+}
+
 // Maps TPC question text -> key in the PhilPapers 2020 dataset (only mappable questions).
 const philpapersQuestionMap = {
 "A priori knowledge (Knowledge which can be justified without appeal to experience) : Yes or No? ": "a_priori_knowledge",
@@ -318,6 +362,9 @@ const counts = {};
 
 if (Array.isArray(dataset)) {
 const isMultiSelect = multiSelectQuestions.includes(question);
+const canonicalize = (question === FAVORITE_PHILOSOPHER_Q)
+    ? buildPhilosopherCanon(dataset, question)
+    : null;
 
 dataset.forEach(person => {
     let answer = person[question];
@@ -335,7 +382,8 @@ dataset.forEach(person => {
             counts[part] = (counts[part] || 0) + 1;
         });
     } else {
-        counts[answer] = (counts[answer] || 0) + 1;
+        const label = canonicalize ? canonicalize(answer) : answer;
+        counts[label] = (counts[label] || 0) + 1;
     }
 });
 } else {
