@@ -349,6 +349,55 @@ entries = [
 return { entries, hiddenAnswers, isExpanded, fullEntries };
 }
 
+// Concise axis labels for a few very long answer options. The full text is kept
+// for the tooltip (shown on hover); only the chart axis uses the short form.
+const answerShortLabels = {
+    "What is the highest level of formal training you have in philosophy?": {
+        "I'm an autodidact (self-study)": "Autodidact (self-study)",
+        "I'm in an undergraduate program in philosophy, or have an undergraduate degree in philosophy": "Undergrad — philosophy",
+        "I'm in a graduate program in philosophy, or have a graduate degree in philosophy": "Grad — philosophy",
+        "I'm in an undergraduate program in something other than philosophy, or have an undergraduate degree in something other than philosophy": "Undergrad — other field",
+        "I'm in a graduate program in something other than philosophy, or have a graduate degree in something other than philosophy": "Grad — other field",
+        "I'm involved in academic philosophy professionally (including adjuncts, teaching professors, research professors, tenure track etc.)": "Professional academic"
+    }
+};
+
+function displayLabel(question, full) {
+    const map = answerShortLabels[question];
+    return (map && map[full]) || full;
+}
+
+// Word-wrap a long axis label into lines.
+const MAX_CHARS_PER_LINE = 26;
+
+function wrapLabel(label) {
+    label = String(label);
+    if (label.length <= MAX_CHARS_PER_LINE) return [label];
+
+    const words = label.split(" ");
+    const lines = [];
+    let currentLine = "";
+
+    words.forEach(word => {
+        if ((currentLine + " " + word).trim().length > MAX_CHARS_PER_LINE) {
+            if (currentLine) lines.push(currentLine.trim());
+            currentLine = word;
+        } else {
+            currentLine = (currentLine + " " + word).trim();
+        }
+    });
+
+    if (currentLine) lines.push(currentLine.trim());
+    return lines;
+}
+
+// Height per bar row, sized to the label with the most wrapped lines so tall
+// multi-line labels never overlap their neighbours.
+function rowHeightFor(labels) {
+    const maxLines = labels.reduce((m, l) => Math.max(m, wrapLabel(l).length), 1);
+    return Math.max(55, maxLines * 15 + 24);
+}
+
 function createQuestionCard(question, dataset, options = {}) {
 const {
 sourceLabel = "2026 TPC Survey",
@@ -356,6 +405,9 @@ allowToggle = true,
 isComparison = false,
 includeHeader = true
 } = options;
+
+// Map full answer labels to their short display form (for the y-axis only).
+const toDisplay = ls => ls.map(l => displayLabel(question, l));
 
 // Array = raw respondents (tally them); object = pre-computed percentages (PhilPapers).
 const counts = {};
@@ -430,7 +482,7 @@ if (includeHeader) {
 card.innerHTML = `
 <div class="card-body">
     ${headerMarkup}
-    <div style="height:${Math.max(labels.length * 55, 220)}px">
+    <div style="height:${Math.max(labels.length * rowHeightFor(toDisplay(labels)), 220)}px">
         <canvas></canvas>
     </div>
     ${allowToggle ? '<small class="toggle-text text-muted" style="cursor:pointer; text-decoration:underline;">Click "Other" (or this text) to view all options</small>' : ''}
@@ -452,7 +504,7 @@ const colors = [
 const chart = new Chart(ctx, {
 type: "bar",
 data: {
-    labels: labels,
+    labels: toDisplay(labels),
     datasets: [{
         data: percentages,
         backgroundColor: labels.map(
@@ -482,6 +534,10 @@ options: {
         },
         tooltip: {
             callbacks: {
+                // Show the full (un-shortened) answer text on hover.
+                title: function(items) {
+                    return items.length ? labels[items[0].dataIndex] : "";
+                },
                 label: function(context) {
                     if (isPercentDataset) {
                         return `${Number(values[context.dataIndex]).toFixed(1)}%`;
@@ -503,30 +559,9 @@ options: {
             },
             ticks: {
                 autoSkip: false,
-                // Word-wrap long answer labels onto multiple lines (~20 chars each).
+                // Word-wrap long answer labels (row height adapts to fit them).
                 callback: function(value) {
-                    const label = this.getLabelForValue(value);
-                    const maxCharsPerLine = 20;
-
-                    if (label.length <= maxCharsPerLine) {
-                        return label;
-                    }
-
-                    const words = label.split(' ');
-                    const lines = [];
-                    let currentLine = '';
-
-                    words.forEach(word => {
-                        if ((currentLine + ' ' + word).trim().length > maxCharsPerLine) {
-                            lines.push(currentLine.trim());
-                            currentLine = word;
-                        } else {
-                            currentLine = (currentLine + ' ' + word).trim();
-                        }
-                    });
-
-                    if (currentLine) lines.push(currentLine);
-                    return lines;
+                    return wrapLabel(this.getLabelForValue(value));
                 }
             },
             // Reserve a minimum width so wrapped labels aren't cramped.
@@ -560,11 +595,11 @@ function renderExpanded() {
     values = nextEntries.map(e => e[1]);
     percentages = values.map(v => ((v / values.reduce((a, b) => a + b, 0)) * 100).toFixed(1));
 
-    chart.data.labels = labels;
+    chart.data.labels = toDisplay(labels);
     chart.data.datasets[0].data = percentages;
     chart.data.datasets[0].backgroundColor = labels.map((_, i) => colors[i % colors.length]);
 
-    const newHeight = Math.max(labels.length * 55, 220);
+    const newHeight = Math.max(labels.length * rowHeightFor(toDisplay(labels)), 220);
     heightDiv.style.height = `${newHeight}px`;
 
     requestAnimationFrame(() => {
