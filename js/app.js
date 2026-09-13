@@ -31,10 +31,15 @@ if (pageGroup == "philosophy" && philpapersResult && philpapersResult.ok) {
 
 const compareToggle = document.getElementById("comparePhilPapers");
 
-// filters: { question -> Set(selected values) }; compare mirrors the PhilPapers toggle.
-const state = { filters: {}, compare: false };
+// filters: { question -> Set(selected values) }; compare mirrors the PhilPapers
+// toggle; chartType is "bar" or "pie"; valueMode is "percent" or "count".
+const state = { filters: {}, compare: false, chartType: "bar", valueMode: "percent" };
 
 function render() {
+    // Canvas text isn't styled by CSS, so pull the theme's text colour and give
+    // it to Chart.js (keeps axis/legend labels legible in dark & pink themes).
+    Chart.defaults.color = getComputedStyle(document.body).getPropertyValue("--text").trim() || "#1f2937";
+
     const filtered = applyDemographicFilters(data, state.filters);
     updateFilterSummary(data.length, filtered.length, state.filters);
 
@@ -48,7 +53,7 @@ function render() {
         return;
     }
 
-    generateCharts(filtered, questionGroups, philpapersData, state.compare);
+    generateCharts(filtered, questionGroups, philpapersData, state.compare, state.chartType, state.valueMode);
 }
 
 // Only show the filter bar on pages that actually render charts.
@@ -58,6 +63,18 @@ const demographicQuestions = questionGroups.demographics || [];
 if (questionsForPage.length > 0 && demographicQuestions.length > 0) {
     buildFilterBar(demographicQuestions, data, state, render);
 }
+
+// Bar/Pie + %/Count switches (shown on any page that renders charts).
+if (questionsForPage.length > 0) {
+    buildChartTypeToggle(state, render);
+}
+
+// Re-render charts when the theme toggle changes body's class, so the canvas
+// text colour follows the theme.
+new MutationObserver(render).observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class"]
+});
 
 if (compareToggle) {
     compareToggle.checked = false;
@@ -403,8 +420,21 @@ const {
 sourceLabel = "2026 TPC Survey",
 allowToggle = true,
 isComparison = false,
-includeHeader = true
+includeHeader = true,
+chartType = "bar",
+valueMode = "percent"
 } = options;
+
+const isPie = chartType === "pie";
+
+// PhilPapers data is percentages only (no raw counts), so it always shows %.
+// Otherwise honour the %/Count toggle for the data label on each bar/slice.
+function dataLabelText(value, context) {
+    if (valueMode === "count" && !isPercentDataset) {
+        return values[context.dataIndex];
+    }
+    return value + "%";
+}
 
 // Map full answer labels to their short display form (for the y-axis only).
 const toDisplay = ls => ls.map(l => displayLabel(question, l));
@@ -482,7 +512,7 @@ if (includeHeader) {
 card.innerHTML = `
 <div class="card-body">
     ${headerMarkup}
-    <div style="height:${Math.max(labels.length * rowHeightFor(toDisplay(labels)), 220)}px">
+    <div style="height:${isPie ? 360 : Math.max(labels.length * rowHeightFor(toDisplay(labels)), 220)}px">
         <canvas></canvas>
     </div>
     ${allowToggle ? '<small class="toggle-text text-muted" style="cursor:pointer; text-decoration:underline;">Click "Other" (or this text) to view all options</small>' : ''}
@@ -498,80 +528,114 @@ const colors = [
 "#59A14F",
 "#F28E2B",
 "#E15759",
-"#76B7B2"
+"#76B7B2",
+"#EDC948",
+"#B07AA1",
+"#FF9DA7",
+"#9C755F",
+"#BAB0AC"
 ];
 
-const chart = new Chart(ctx, {
-type: "bar",
-data: {
-    labels: toDisplay(labels),
-    datasets: [{
-        data: percentages,
-        backgroundColor: labels.map(
-            (_, i) => colors[i % colors.length]
-        ),
-        borderRadius: 8,
-        categoryPercentage: 0.7,
-        barPercentage: 0.9
-    }]
-},
-options: {
-    indexAxis: "y",
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: {
-            display:false
-        },
-        datalabels: {
-            color:"#ffffff",
-            font: {
-                weight:"bold"
-            },
-            formatter: function(value) {
-                return value + "%";
-            }
-        },
-        tooltip: {
-            callbacks: {
-                // Show the full (un-shortened) answer text on hover.
-                title: function(items) {
-                    return items.length ? labels[items[0].dataIndex] : "";
-                },
-                label: function(context) {
-                    if (isPercentDataset) {
-                        return `${Number(values[context.dataIndex]).toFixed(1)}%`;
-                    }
-
-                    return `${values[context.dataIndex]} responses (${percentages[context.dataIndex]}%)`;
-                }
-            }
-        }
+// Shared between bar and pie: hover shows full label + response count/percent.
+const tooltipCallbacks = {
+    // Show the full (un-shortened) answer text on hover.
+    title: function(items) {
+        return items.length ? labels[items[0].dataIndex] : "";
     },
-    scales: {
-        x: {
-            display:false,
-            max:100
+    label: function(context) {
+        if (isPercentDataset) {
+            return `${Number(values[context.dataIndex]).toFixed(1)}%`;
+        }
+        return `${values[context.dataIndex]} responses (${percentages[context.dataIndex]}%)`;
+    }
+};
+
+let chartConfig;
+
+if (isPie) {
+    chartConfig = {
+        type: "pie",
+        data: {
+            labels: toDisplay(labels),
+            datasets: [{
+                data: percentages,
+                backgroundColor: labels.map((_, i) => colors[i % colors.length]),
+                borderWidth: 1
+            }]
         },
-        y: {
-            grid: {
-                display: false
-            },
-            ticks: {
-                autoSkip: false,
-                // Word-wrap long answer labels (row height adapts to fit them).
-                callback: function(value) {
-                    return wrapLabel(this.getLabelForValue(value));
-                }
-            },
-            // Reserve a minimum width so wrapped labels aren't cramped.
-            afterFit: function(scale) {
-                scale.width = Math.max(scale.width, 150);
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: "bottom",
+                    labels: { boxWidth: 12, padding: 10 }
+                },
+                datalabels: {
+                    color: "#ffffff",
+                    font: { weight: "bold" },
+                    // Only label slices big enough to fit the text.
+                    display: function(context) {
+                        return Number(context.dataset.data[context.dataIndex]) >= 5;
+                    },
+                    formatter: dataLabelText
+                },
+                tooltip: { callbacks: tooltipCallbacks }
             }
         }
-    }
+    };
+} else {
+    chartConfig = {
+        type: "bar",
+        data: {
+            labels: toDisplay(labels),
+            datasets: [{
+                data: percentages,
+                backgroundColor: labels.map((_, i) => colors[i % colors.length]),
+                borderRadius: 8,
+                categoryPercentage: 0.7,
+                barPercentage: 0.9
+            }]
+        },
+        options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    color: "#ffffff",
+                    font: { weight: "bold" },
+                    formatter: dataLabelText
+                },
+                tooltip: { callbacks: tooltipCallbacks }
+            },
+            scales: {
+                x: {
+                    display: false,
+                    max: 100
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: {
+                        autoSkip: false,
+                        // Word-wrap long answer labels (row height adapts to fit them).
+                        callback: function(value) {
+                            return wrapLabel(this.getLabelForValue(value));
+                        }
+                    },
+                    // Reserve a minimum width so wrapped labels aren't cramped.
+                    afterFit: function(scale) {
+                        scale.width = Math.max(scale.width, 150);
+                    }
+                }
+            }
+        }
+    };
 }
-});
+
+const chart = new Chart(ctx, chartConfig);
 
 // Expand/collapse the "Other" bucket. Only charts with hidden answers can expand.
 if (allowToggle && (!isComparison || sourceLabel == "2026 TPC Survey")) {
@@ -599,7 +663,7 @@ function renderExpanded() {
     chart.data.datasets[0].data = percentages;
     chart.data.datasets[0].backgroundColor = labels.map((_, i) => colors[i % colors.length]);
 
-    const newHeight = Math.max(labels.length * rowHeightFor(toDisplay(labels)), 220);
+    const newHeight = isPie ? 360 : Math.max(labels.length * rowHeightFor(toDisplay(labels)), 220);
     heightDiv.style.height = `${newHeight}px`;
 
     requestAnimationFrame(() => {
@@ -640,7 +704,7 @@ ctx.onclick = function(event) {
 return card;
 }
 
-function generateCharts(data, questionGroups, philpapersData, compareEnabled = false) {
+function generateCharts(data, questionGroups, philpapersData, compareEnabled = false, chartType = "bar", valueMode = "percent") {
 const dashboard = document.getElementById("dashboard");
 dashboard.innerHTML = "";
 
@@ -679,7 +743,9 @@ questions.forEach(question => {
         sourceLabel: "2026 TPC Survey",
         allowToggle: true,
         isComparison: true,
-        includeHeader: false
+        includeHeader: false,
+        chartType: chartType,
+        valueMode: valueMode
     }));
 
     const philpapersCounts = getPhilpapersCountsForQuestion(question, philpapersData);
@@ -691,7 +757,9 @@ questions.forEach(question => {
             sourceLabel: "PhilPapers 2020",
             allowToggle: false,
             isComparison: true,
-            includeHeader: false
+            includeHeader: false,
+            chartType: chartType,
+            valueMode: valueMode
         }));
         comparisonRow.appendChild(leftCol);
         comparisonRow.appendChild(rightCol);
@@ -711,8 +779,55 @@ questions.forEach(question => {
 dashboard.appendChild(createQuestionCard(question, data, {
     sourceLabel: "2026 TPC Survey",
     allowToggle: true,
-    isComparison: false
+    isComparison: false,
+    chartType: chartType,
+    valueMode: valueMode
 }));
+});
+}
+
+// Bar/Pie + %/Count switches inserted above the dashboard; re-render on change.
+function buildChartTypeToggle(state, render) {
+const dashboard = document.getElementById("dashboard");
+if (!dashboard || document.getElementById("chartTypeControls")) return;
+
+const wrap = document.createElement("div");
+wrap.id = "chartTypeControls";
+wrap.className = "d-flex align-items-center flex-wrap gap-3 mb-4";
+wrap.innerHTML = `
+    <span class="d-flex align-items-center gap-2">
+        <span class="text-muted small">Chart type:</span>
+        <span class="btn-group btn-group-sm" role="group" aria-label="Chart type">
+            <input type="radio" class="btn-check" name="chartType" id="chartTypeBar" autocomplete="off" checked>
+            <label class="btn btn-outline-secondary" for="chartTypeBar">Bar</label>
+            <input type="radio" class="btn-check" name="chartType" id="chartTypePie" autocomplete="off">
+            <label class="btn btn-outline-secondary" for="chartTypePie">Pie</label>
+        </span>
+    </span>
+    <span class="d-flex align-items-center gap-2">
+        <span class="text-muted small">Values:</span>
+        <span class="btn-group btn-group-sm" role="group" aria-label="Value mode">
+            <input type="radio" class="btn-check" name="valueMode" id="valuePercent" autocomplete="off" checked>
+            <label class="btn btn-outline-secondary" for="valuePercent">%</label>
+            <input type="radio" class="btn-check" name="valueMode" id="valueCount" autocomplete="off">
+            <label class="btn btn-outline-secondary" for="valueCount">Count</label>
+        </span>
+    </span>`;
+
+dashboard.parentNode.insertBefore(wrap, dashboard);
+
+wrap.querySelectorAll('input[name="chartType"]').forEach(input => {
+    input.addEventListener("change", () => {
+        state.chartType = document.getElementById("chartTypePie").checked ? "pie" : "bar";
+        render();
+    });
+});
+
+wrap.querySelectorAll('input[name="valueMode"]').forEach(input => {
+    input.addEventListener("change", () => {
+        state.valueMode = document.getElementById("valueCount").checked ? "count" : "percent";
+        render();
+    });
 });
 }
 
