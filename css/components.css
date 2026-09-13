@@ -105,6 +105,11 @@
     opacity:.92;
 }
 
+/* Chart controls (Bar/Pie, %/Count) — keep labels legible across themes. */
+#chartTypeControls .text-muted{
+    color:var(--text-light)!important;
+}
+
 /* Demographic filter bar */
 .filter-bar{
     position:relative;
